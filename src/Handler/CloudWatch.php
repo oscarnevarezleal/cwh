@@ -128,7 +128,8 @@ class CloudWatch extends AbstractProcessingHandler
         $level = Logger::DEBUG,
         $bubble = true,
         $createGroup = true
-    ) {
+    )
+    {
         if ($batchSize > 10000) {
             throw new \InvalidArgumentException('Batch size can not be greater than 10000');
         }
@@ -182,7 +183,6 @@ class CloudWatch extends AbstractProcessingHandler
             if (false === $this->initialized) {
                 $this->initialize();
             }
-
             // send items, retry once with a fresh sequence token
             try {
                 $this->send($this->buffer);
@@ -207,7 +207,9 @@ class CloudWatch extends AbstractProcessingHandler
 
         if ($sameSecond && $this->remainingRequests > 0) {
             $this->remainingRequests--;
+//            echo 'remainingRequests-- ' . $this->remainingRequests . " \n";
         } elseif ($sameSecond && $this->remainingRequests === 0) {
+//            echo 'Sleeping (1s)' . "\n";
             sleep(1);
             $this->remainingRequests = self::RPS_LIMIT;
         } elseif (!$sameSecond) {
@@ -290,7 +292,7 @@ class CloudWatch extends AbstractProcessingHandler
             $data['sequenceToken'] = $this->sequenceToken;
         }
 
-        $this->checkThrottle();
+        // $this->checkThrottle();
 
         $response = $this->client->putLogEvents($data);
 
@@ -350,16 +352,20 @@ class CloudWatch extends AbstractProcessingHandler
 
     private function refreshSequenceToken(): void
     {
-        // fetch existing streams
-        $existingStreams =
-            $this
-                ->client
-                ->describeLogStreams(
-                    [
-                        'logGroupName' => $this->group,
-                        'logStreamNamePrefix' => $this->stream,
-                    ]
-                )->get('logStreams');
+        static $existingStreams = null;
+
+        if (!$existingStreams) {
+            // fetch existing streams
+            $existingStreams =
+                $this
+                    ->client
+                    ->describeLogStreams(
+                        [
+                            'logGroupName' => $this->group,
+                            'logStreamNamePrefix' => $this->stream,
+                        ]
+                    )->get('logStreams');
+        }
 
         // extract existing streams names
         $existingStreamsNames = array_map(
